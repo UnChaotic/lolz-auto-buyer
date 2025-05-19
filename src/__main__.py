@@ -7,10 +7,10 @@ from src.market.api import parse_search_data
 from src.telegram import TelegramAPI
 
 TELEGRAM_MESSAGE = (
-    '🎊 Приобретен аккаунт: <a href="https://lzt.market/{item_id}">'
+    '🎊 Account purchased: <a href="https://lzt.market/{item_id}">'
     "{title}</a>\n"
-    "💲 Цена: <code>{price}₽</code>\n"
-    '👷 Продавец: <a href="https://zelenka.guru/members/{seller_id}">'
+    "💲 Price: <code>{price}₽</code>\n"
+    '👷 Seller: <a href="https://zelenka.guru/members/{seller_id}">'
     "{seller_username}</a>"
 )
 
@@ -37,27 +37,27 @@ def main():
             items = search_result.get("items", [])
 
             logging.info(
-                "По запросу %s с параметрами %s найдено %s аккаунтов",
+                "Found %s accounts for search %s with parameters %s",
+                len(items),
                 search,
                 urllib.parse.unquote(params),
-                len(items),
             )
 
             for item in items:
                 item_id = item["item_id"]
                 market_item = MarketItem(item, lolzteam_token)
                 try:
-                    logging.info("Покупаю аккаунт %s", item_id)
+                    logging.info("Buying account %s", item_id)
                     market_item.fast_buy()
                 except MarketBuyError as error:
                     logging.warning(
-                        "При попытке покупки аккаунта %s произошла ошибка: %s",
+                        "Error occurred while trying to buy account %s: %s",
                         item_id,
                         error.message,
                     )
                     continue
                 else:
-                    logging.info("Аккаунт %s успешно куплен!", item_id)
+                    logging.info("Account %s successfully purchased!", item_id)
                     count_purchase += 1
 
                     account_object = market_item.item_object
@@ -76,7 +76,7 @@ def main():
 
                     if count_purchase >= config.lolzteam.count:
                         logging.info(
-                            "Успешно куплено %s аккаунтов, работа завершена.",
+                            "Successfully purchased %s accounts, work completed.",
                             count_purchase,
                         )
                         exit()

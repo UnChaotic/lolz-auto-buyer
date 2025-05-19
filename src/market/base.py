@@ -48,7 +48,7 @@ class BaseMarketAPI:
 
         except error.HTTPError as http_error:
             error_response = http_error.read().decode("utf-8")
-            logger.warning("Получена ошибка: %s", error_response)
+            logger.warning("Received error: %s", error_response)
             try:
                 error_response = json.loads(error_response).get("errors")
             except json.decoder.JSONDecodeError:
@@ -57,7 +57,7 @@ class BaseMarketAPI:
                 so error is logged and called MarketBuyError
                 to stop application
                 """
-                raise MarketBuyError("Получена неизвестная ошибка")
+                raise MarketBuyError("Received unknown error")
             raise MarketBuyError(error_response[0])
         except (error.URLError, socket_error):
             """
