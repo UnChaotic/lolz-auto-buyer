@@ -1,7 +1,8 @@
 import json
-import ssl
 from typing import Optional
-from urllib import parse, request
+
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class TelegramAPI:
@@ -10,26 +11,33 @@ class TelegramAPI:
     def __init__(self, bot_token: str):
         self.bot_token = bot_token
         self.API_URL += self.bot_token
+        self.client = httpx.Client(
+            http2=True,
+            timeout=30.0,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+        )
 
+    def __del__(self):
+        self.client.close()
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
     def api_request(
         self,
         method: str,
         data: Optional[dict] = None,
         request_method: str = "GET",
     ) -> dict:
-        if data is not None:
-            request_data = parse.urlencode(data).encode()
-        else:
-            request_data = None
-        api_request = request.Request(
-            url=f"{self.API_URL}/{method}",
-            data=request_data,
+        response = self.client.request(
             method=request_method,
+            url=f"{self.API_URL}/{method}",
+            data=data,
         )
-        context = _get_disable_ssl()
-        with request.urlopen(api_request, context=context) as response_object:
-            response = json.load(response_object)
-            return response
+        response.raise_for_status()
+        return response.json()
 
     def send_message(self, text: str, chat_id: int, **kwargs) -> dict:
         response = self.api_request(
@@ -37,10 +45,3 @@ class TelegramAPI:
             {"text": text, "chat_id": chat_id, **kwargs},
         )
         return response
-
-
-def _get_disable_ssl() -> ssl.SSLContext:
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    return context
